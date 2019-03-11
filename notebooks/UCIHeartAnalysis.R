@@ -1,0 +1,191 @@
+
+
+
+library(tidyverse)
+library(scales)
+library(dplyr)
+library(corrplot)
+library(ROCR)
+library(caTools)
+library(rpart)
+library(naivebayes)
+
+
+heart<-read.csv("heart.csv",
+                  header = TRUE,
+                  na.strings = "",
+                  stringsAsFactors = FALSE
+)
+
+
+# Let's take a look at the data
+dim(heart) 
+na_count <- sort(sapply(heart, function(x) sum(is.na(x))),
+                 decreasing = TRUE)
+na_count
+glimpse(heart)
+colnames(heart)
+
+#age, sex, cp (chest pain type), tresbps (resting blood pressure), chol, fbs (fasting blood sugar > 120 mg/dl, 1= true; 0 = false), 
+#restecg (resting ecg), thalach (max heart rate), exang (exercise induced), oldpeak, slope, ca (# of major vessels colored by flourosopy), 
+#thal (3 = normal, 6 = fixed defect, 7 = reversible defect), target
+
+
+# lets look at the correlation between the features
+cor_heart = cor(heart)
+corrplot(cor_heart, method = "ellipse", type="upper")
+
+
+# thanks to this correlation plot, we can see that features trestbps, \
+# chol, fbs, and restecg are the least correlated features.
+# but just for completion's sake, we will use cholesterol as a metric in graphs to verify.
+
+
+# data cleaning
+heart$sex <- as.factor(heart$sex)
+heart$sex <- ifelse(heart$sex == "0", "female", "male")
+heart$cp <-as.factor(heart$cp)
+heart$target <- as.factor(heart$target)
+heart$restecg <- as.factor(heart$restecg)
+heart$slope <- as.factor(heart$slope)
+heart$exang <- as.factor(heart$exang)
+
+
+colnames(heart)[1] <- "age"
+colnames(heart)[3] <- "chest_pain"
+colnames(heart)[6] <- "fasting_blood_sugar"
+heart$fasting_blood_sugar <- ifelse(heart$fasting_blood_sugar == "0", "under 120 mg", "over 120mg")
+heart$fasting_blood_sugar <- as.factor(heart$fasting_blood_sugar)
+
+summary(heart)
+glimpse(heart)
+
+
+# Target
+# First identify what the target feature looks like by itself
+rate_affected <- ggplot(heart, aes(x = target, fill = target)) +
+  geom_bar(position = "dodge2", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count.., vjust=-0.4), position = position_dodge(width=0.9)) +
+  ggtitle("Heart Disease")
+
+rate_affected + labs(x = "Unaffected vs Affected",
+                     y = "Frequency"
+                     )
+
+# basic scatterplot
+# change the target variable from 0~1 to have heart disease or absent
+
+heart$target <- ifelse(heart$target == "1", "Present", "Absent")
+heart$target <- as.factor(heart$target)
+
+
+# age
+
+ggplot(data = heart) +
+  geom_bar(aes(x=age), fill = "blue") +
+  facet_wrap(~ target)
+  ggtitle("Age Compared to Heart Disease")
+
+# looking at affected and unaffected rates in measures of cholesterol
+# sorted by chest pain type
+age_chol2 <- ggplot(data = heart) +
+  geom_point(mapping = aes(x = heart$age, y = heart$chol, color = heart$sex), position = "jitter") +
+  facet_wrap(heart$target ~ heart$chest_pain, nrow = 4, ncol = 4)
+
+age_chol2 + labs(x = "Age", 
+                 y = " Cholesterol", 
+                 color = "Sex", 
+                 title = "Levels of Cholesterol in mg", 
+                 subtitle = "sorted by presence of heart disease, chest pain type", 
+                 caption = "(data source: Kaggle Heart Disease UCI)"
+                 )
+
+
+# sorted by rest ecg
+age_chol3 <- ggplot(data = heart) +
+  geom_point(mapping = aes(x = heart$age, y = heart$chol, color = heart$sex), position = "jitter") +
+  facet_wrap(heart$target ~ heart$restecg, ncol = 3, nrow = 2)
+
+age_chol3 + labs(x = "Age", 
+                 y = " Cholesterol", 
+                 color = "Sex", 
+                 title = "Levels of Cholesterol in mg", 
+                 subtitle = "sorted by presence of heart disease, restecg", 
+                 caption = "(data source: Kaggle Heart Disease UCI)"
+                 )
+
+# sorted by fasting blood sugar over 120 mg
+age_chol4 <- ggplot(data = heart) +
+  geom_point(mapping = aes(x = heart$age, y = heart$chol, color = heart$sex), position = "jitter") +
+  facet_wrap(heart$target ~ heart$fasting_blood_sugar, ncol = 2, nrow = 2)
+
+age_chol4 + labs(x = "Age", 
+                 y = " Cholesterol", 
+                 color = "Sex", 
+                 title = "Levels of Cholesterol in mg", 
+                 subtitle = "sorted by presence of heart disease, fasting blood sugar over 120 mg", 
+                 caption = "(data source: Kaggle Heart Disease UCI)"
+)
+
+
+#Sex
+ggplot(heart, aes(x = sex, fill = target)) +
+  geom_bar(position = "dodge2", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count.., vjust=-0.4), position = position_dodge(width=0.9)) +
+  ggtitle("Gender vs Disease") 
+  
+
+male_hearts <- filter(heart, sex == "male")
+female_hearts <- filter(heart, sex== "female")
+
+ggplot(female_hearts, aes(x = target)) +
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = target), stat = "count", color = "black") +
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..)),
+                 y= ((..count..)/sum(..count..))), stat= "count", vjust = -0.4) +
+  ggtitle("Percentage of Females") +
+  xlab("Unaffected vs Affected") +
+  ylab("% of Female Population")
+
+ggplot(male_hearts, aes(x = target)) +
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = target), stat = "count", color = "black") +
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..)),
+                 y= ((..count..)/sum(..count..))), stat= "count", vjust = -0.4) +
+  ggtitle("Percentage of Males") +
+  xlab("Unaffected vs Affected") +
+  ylab("% of Male Population")
+
+
+#
+heart_disease_category <- c('Absent' = 'No Heart Disease',
+                            'Present' = 'Heart Disease')
+
+thalsex <- qplot(x = thalach, data = heart, binwidth = 5, geom = 'freqpoly', color = sex) +
+  scale_x_continuous(breaks = seq(0, 303, 10)) +
+  facet_wrap(heart$target, nrow = 2, labeller = as_labeller(heart_disease_category))
+
+
+thalsex + labs(x = "Thalach",
+               y = "Thalach Frequency",
+               color = "Sex",
+               title = "Thalach Levels by Sex",
+               subtitle = "max heart rate",
+               caption ="(data source: Kaggle Heart Disease UCI)"
+                )
+
+# Features more likely to affect presence of heart disease so far:
+# chest pain, age, sex, exang, old peak, ca, slope, thal, thalach
+
+set.seed(999)
+splitter = sample.split(heart$target, SplitRatio = 0.75)
+train = subset(heart, splitter == TRUE)
+test = subset(heart, splitter == FALSE)
+
+
+glm_mod <- glm(target ~ sex + chest_pain + thalach + thal + ca + slope + exang + oldpeak, data=train, family = "binomial")
+pred <- predict(glm_mod, newdata = train, type = "response")
+
+
+summary(glm_mod)
+
+ROCRpred <- prediction(pred, train$target)
+plot(performance(ROCRpred,"tpr","fpr"), colorize=TRUE)
