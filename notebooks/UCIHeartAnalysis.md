@@ -407,9 +407,3 @@ plot(performance(ROCRpred,"tpr","fpr"), colorize=TRUE)
 ```
 
 ![](UCIHeartAnalysis_files/figure-markdown_github/unnamed-chunk-14-1.png)
-
-You can also embed plots, for example:
-
-![](UCIHeartAnalysis_files/figure-markdown_github/pressure-1.png)
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
