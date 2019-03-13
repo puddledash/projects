@@ -11,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Heart Disease Analysis via UCI 
 
 ```{r}
 
