@@ -1,6 +1,8 @@
 Heart Disease Analysis via UCI
 ------------------------------
 
+First step: Load necessary libraries and some additional libraries if needed for data exploration.
+
 ``` r
 library(tidyverse)
 ```
@@ -64,6 +66,10 @@ heart<-read.csv("E:/Documents/R/Data/projects/data/heart.csv",
 )
 ```
 
+After the libraries are loaded, we then created a dataframe variable called "heart" that contains the data set provided by Kaggle via UCI for their heart disease metrics.
+
+Next, we do some simple data cleaning by checking for nulls, looking at observation totals, identifying feature names, etc.
+
 ``` r
 dim(heart) 
 ```
@@ -110,9 +116,11 @@ colnames(heart)
     ##  [7] "restecg"  "thalach"  "exang"    "oldpeak"  "slope"    "ca"      
     ## [13] "thal"     "target"
 
+### Column names and their descriptions via documentation
+
 age, sex, cp (chest pain type), tresbps (resting blood pressure), chol, fbs (fasting blood sugar &gt; 120 mg/dl, 1= true; 0 = false), restecg (resting ecg), thalach (max heart rate), exang (exercise induced), oldpeak, slope, ca (\# of major vessels colored by flourosopy), thal (3 = normal, 6 = fixed defect, 7 = reversible defect), target
 
-lets look at the correlation between the features
+Now that we have a brief understanding of what each feature represents, the next step would be to look for any correlation between the different features. A simple way to do that is to generate a correlation plot thanks to the corrplot library.
 
 ``` r
 cor_heart = cor(heart)
@@ -122,10 +130,14 @@ corrplot(cor_heart, method = "ellipse", type="upper")
 ![](UCIHeartAnalysis_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 thanks to this correlation plot, we can see that features trestbps,
-chol, fbs, and restecg are the least correlated features. but just for completion's sake, we will use cholesterol as a metric in graphs to verify.
+chol, fbs, and restecg are the least correlated features when associated with the target variable. The target variable represents whether a person has heart disease or not.
+
+Next is the data cleaning within R.
 
 data cleaning
 =============
+
+The first step is to turn any categorical features into factors within R so functions will treat them as such instead of numerical. Then. we change some feature names to be more easily understood. Finally we are again able to look at the summary of the whole data frame.
 
 ``` r
 heart$sex <- as.factor(heart$sex)
