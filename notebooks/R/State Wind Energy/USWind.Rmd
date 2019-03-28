@@ -1,0 +1,247 @@
+---
+title: "United States Turbine Report"
+author: Jed P
+date: March 27, 2019
+output: 
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# A Brief Look at Wind Energy in the United States
+## Purpose:
+The primary purpose of this document is to reinforce the data cleaning and exploration phases within the data science methodology using R. The secondary purpose is to generate questions in regards to the domain of the data; for example... 'why do some states do not have any wind energy?' or 'Is there a meaningful relationship between amount of projects and amount of turbines? If so, why or why not?'. These questions will later be explored and hopefully answered. 
+
+Ideally, the findings on this report would also be used in an R Shiny dashboard similar to one used in actual production after going through the first two purposes.
+
+### Process:
+First, we load the necessary package called 'tidyverse' that allows use to use additional data manipulation or data visualization functions found in other packages.
+```{r}
+library(tidyverse)
+```
+
+Next, we can begin loading the data and taking a brief look at it as a whole.
+```{r}
+dfraw <- read.csv("E:/Documents/R/Data/projects/data/USWind.csv",
+               header = TRUE,
+               na.strings = "",
+               stringsAsFactors = FALSE)
+
+
+glimpse(dfraw)
+summary(dfraw)
+colnames(dfraw)
+```
+
+At this point, I decided to break down the steps even further in regards to how I want to approach this set.
+### Things to Do
+##### Clean: rename columns (done in Excel), remove commas / periods in numbers, change variable type
+##### Explore: Descriptive Statistics, Mutate new algebraeic columns (grouped by dollars)
+
+Now that some first steps have been defined, we can go ahead and start. However, The following code is showcasing my initial approach without any edits along with my actual comments I made as I worked through. I will have a condensed chunk of code that will summarize this portion of the analysis after going through the initial approach.
+```{r eval=FALSE}
+#- removing commas in one column
+#- The below code would remove the commas in one column
+# dfraw$Installed_Capacity_.MW. <- as.numeric(gsub(",","",dfraw$Installed_Capacity_.MW.))
+
+#- However, we want to remove all the commas in the dataframe.
+#- Instead of writing down the same code for each column, we can use a function.
+#- create a funcion called "commaclean" to remove commas
+
+commaclean <- function(x){
+  as.numeric( gsub("\\,","", x))
+   }
+
+#- if you try the function on one column, it returns NAs introduced by coercion.
+commaclean(dfraw$Total.Investment_.Millions.)
+
+#- Have to change the NA's to 0. 
+#- The below code does not work because the character type is not numeric.
+#- dfraw[is.na(dfraw)] <- 0
+#- Therefore, we assign the 0 as a character "0" 
+
+dfraw[is.character(dfraw) | dfraw=="NA"] <- "0"
+dfraw
+
+#- If we apply the function to the dataframe, it will remove the values in the State column.
+#- Therefore we can separate the State column for now and drop it using the subset() function.
+
+states <- dfraw$State
+df = subset(dfraw, select = -State)
+
+#- Now we can apply our commaclean function to the dataframe.
+
+df[] <- sapply(df, commaclean)
+
+#- Finally, we insert the States column back using the add_column function from the tibble package (found in tidyverse)
+
+df <- add_column(df, State = states, .after = "Ranking")
+```
+
+#### Condensed Code 1
+Now that my initial approach has been worked through and explained, below is the summary and output of the previous code.
+```{r}
+dfraw <- read.csv("E:/Documents/R/Data/projects/data/USWind.csv",
+                  header = TRUE,
+                  na.strings = "",
+                  stringsAsFactors = FALSE)
+
+commaclean <- function(x){
+  as.numeric( gsub("\\,","", x))
+}
+dfraw[is.character(dfraw) | dfraw=="NA"] <- "0"
+states <- dfraw$State
+df = subset(dfraw, select = -State)
+df[] <- sapply(df, commaclean)
+df <- add_column(df, State = states, .after = "Ranking")
+df
+```
+
+
+The following code and comments also detail my next step. Again, there will be a condensed portion after summarizing it all nicely.
+```{r eval=FALSE}
+#- Data Calculations (Exploration)
+#- I am interested in examining the Megawatt per Turbine as well as the Cost per Turbine.
+#- We create additional columns using the mutate() function in the dplyr package.
+#- The output comes back in scientific not while converting the total investment in millions to raw costs.
+#- Therefore we use the format() function to output the actual cost of the new "total_investment" column.
+#- This turns the dataframe variables from <dbl> to <I(chr)> which actually causes complications for now.
+#- We will fix it in the next section; I just wanted to showcase how format() can be used to quickly check.
+#- We also use the select() function to assign which columns to appear first, then line the rest up with everything().
+
+dfe <- select(format(mutate(df,
+       total_investment = df$Total.Investment_.Millions.*1000000,
+       cost_per_turbine = total_investment / df$Wind_Turbines,
+       capacity_per_turbine_.MW. = df$Installed_Capacity_.MW. /df$Wind_Turbines), scientific=F),
+       State, total_investment, Wind_Turbines, cost_per_turbine, Installed_Capacity_.MW., capacity_per_turbine_.MW., everything())
+glimpse(dfe)
+
+#- Cleaning Again
+#- There is no need to have two total investment columns and the rankings column is not useful.
+#- Therefore, I decided to drop them from the dataframe.
+
+drops <- c("Total.Investment_.Millions.", "Ranking")
+dfe <- dfe[, !(names(dfe) %in% drops)]
+
+#- Remember how the format() function changed our variable types?
+#- We can fix it here, but this all could be avoided. For examples sake, the following is how I fixed it:
+#- First, I created a duplicate dataframe. Then I removed the state column.
+#- Next, I use the mutate_all() function to apply a function(xx) which turns characters into numerics.
+#- if you use the format() function, it will then turn everything back into characters which is what we want to avoid.
+
+dfetest <- dfe
+dfetest = subset(dfetest, select = -State)
+dfetest <- mutate_all(dfetest, function(xx) as.numeric(as.character(xx)))
+# dfetest <- format(dfetest, scientific=F)
+glimpse(dfetest)
+
+#- We can see that our dfetest dataframe is now properly numeric, however back in scientific notation.
+#- To fix this, we can just change the how R handles numbers using the options(scipen=x) function.
+#- Setting scipen to 999 removes all scientific notation.
+#- Setting scipen to 0 uses scientific notation.
+
+options(scipen=999)
+# options(scipen=0)
+
+#- Now we can add back in our states column.
+
+dfe <- add_column(dfetest, State = states, .before = "total_investment")
+glimpse(dfe)
+
+#- next is to create a new dataframe containing states without investments in wind energy.
+#- then removing those states from the dfe datframe. This will be done in the condensed section next.
+```
+
+
+#### Condensed Code 2]
+Below summarizes the above into a block of code without the format() function.
+
+```{r}
+options(scipen=999)
+
+dfe <- select(mutate(df,
+                            total_investment = df$Total.Investment_.Millions.*1000000,
+                            cost_per_turbine = total_investment / df$Wind_Turbines,
+                            capacity_per_turbine_.MW. = df$Installed_Capacity_.MW. /df$Wind_Turbines),
+              State, total_investment, Wind_Turbines, cost_per_turbine, Installed_Capacity_.MW., capacity_per_turbine_.MW., everything())
+drops <- c("Total.Investment_.Millions.", "Ranking")
+dfe <- dfe[, !(names(dfe) %in% drops)]
+dfe$State <- as.factor(dfe$State)
+dfmissing <- filter(dfe, total_investment == 0)
+dfe <-dfe[!(dfe$total_investment ==0),]
+
+glimpse(dfmissing)
+glimpse(dfe)
+```
+
+
+
+
+
+### Data Exploration
+Now, the next steps are to visualize the totals and look at measures of central tendency as well as the distribution of each. Below, we first look at some features that have caught my attention using a horizontal bargraph and the ggplot library. ggplot2 is loaded in tidyverse, but I will call it with the library() function anyway for this document.
+
+```{r}
+library(ggplot2)
+library(scales)
+
+#- Total Investments
+ti <- ggplot(dfe, aes(x=reorder(State, total_investment), y=total_investment/1, fill = total_investment)) + 
+  coord_flip()  + geom_bar(stat="identity") + 
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  theme(axis.text.x = element_text(angle=0, vjust=0.9),
+        panel.background = element_blank(), 
+        legend.position = "none")
+
+ti + labs(x = "States",
+          y = "") +
+  ggtitle("Total Investments in US") + theme(plot.title = element_text(hjust=0.46)) +
+  scale_y_continuous(label=dollar_format())
+
+
+#- Cost Per Turbine
+cpt <- ggplot(dfe, aes(x=reorder(State, cost_per_turbine), y=cost_per_turbine/1, fill = cost_per_turbine)) + 
+  coord_flip()  + geom_bar(stat="identity") + 
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  theme(axis.text.x = element_text(angle=0, vjust=0.9),
+        panel.background = element_blank(), 
+        legend.position = "none")
+
+cpt + labs(x = "States",
+          y = "") +
+  ggtitle("Cost Per Wind Turbine in US") + theme(plot.title = element_text(hjust=0.46)) +
+  scale_y_continuous(label=dollar_format())
+
+
+#- Amount of Turbines by State
+turbs <- ggplot(dfe, aes(x=reorder(State, Wind_Turbines), y=Wind_Turbines, fill = Wind_Turbines)) + 
+  coord_flip()  + geom_bar(stat="identity") + 
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  theme(axis.text.x = element_text(angle=0, vjust=0.9),
+        panel.background = element_blank(), 
+        legend.position = "none")
+
+turbs + labs(x = "States",
+           y = "") +
+  ggtitle("Number of Wind Turbines in US") + theme(plot.title = element_text(hjust=0.46))
+
+#- Megawatts per Turbine
+mwt <- ggplot(dfe, aes(x=reorder(State,capacity_per_turbine_.MW.), y=capacity_per_turbine_.MW., fill = capacity_per_turbine_.MW.)) + 
+  coord_flip()  + geom_bar(stat="identity") + 
+  scale_fill_gradient(low = "white", high = "darkorange") +
+  theme(axis.text.x = element_text(angle=0, vjust=0.9),
+        panel.background = element_blank(), 
+        legend.position = "none")
+
+mwt + labs(x = "States",
+             y = "") +
+  ggtitle("Megawatts per Turbine") + theme(plot.title = element_text(hjust=0.46))
+```
+
+There are other features I would like to visualize next such as the project count and homes powered. For now, I will end the current edit with a simple function showcasing measures of central tendencies.
+```{r}
+summary(dfe)
+```
