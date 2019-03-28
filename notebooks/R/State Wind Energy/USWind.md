@@ -84,7 +84,13 @@ colnames(dfraw)
     ## [5] "Total.Investment_.Millions." "Wind_Projects_Online"       
     ## [7] "Wind_Turbines"
 
-At this point, I decided to break down the steps even further in regards to how I want to approach this set. \#\#\# Things to Do \#\#\#\#\# Clean: rename columns (done in Excel), remove commas / periods in numbers, change variable type \#\#\#\#\# Explore: Descriptive Statistics, Mutate new algebraeic columns (grouped by dollars)
+At this point, I decided to break down the steps even further in regards to how I want to approach this set.
+
+### Things to Do
+
+##### Clean: rename columns (done in Excel), remove commas / periods in numbers, change variable type
+
+##### Explore: Descriptive Statistics, Mutate new algebraeic columns (grouped by dollars)
 
 Now that some first steps have been defined, we can go ahead and start. However, The following code is showcasing my initial approach without any edits along with my actual comments I made as I worked through. I will have a condensed chunk of code that will summarize this portion of the analysis after going through the initial approach.
 
@@ -127,7 +133,7 @@ df[] <- sapply(df, commaclean)
 df <- add_column(df, State = states, .after = "Ranking")
 ```
 
-#### Condensed Code 1
+#### Condensed Code 1:
 
 Now that my initial approach has been worked through and explained, below is the summary and output of the previous code.
 
@@ -306,7 +312,7 @@ glimpse(dfe)
 #- then removing those states from the dfe datframe. This will be done in the condensed section next.
 ```
 
-#### Condensed Code 2\]
+#### Condensed Code 2:
 
 Below summarizes the above into a block of code without the format() function.
 

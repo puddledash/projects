@@ -37,6 +37,7 @@ colnames(dfraw)
 ```
 
 At this point, I decided to break down the steps even further in regards to how I want to approach this set.
+
 ### Things to Do
 ##### Clean: rename columns (done in Excel), remove commas / periods in numbers, change variable type
 ##### Explore: Descriptive Statistics, Mutate new algebraeic columns (grouped by dollars)
@@ -81,7 +82,7 @@ df[] <- sapply(df, commaclean)
 df <- add_column(df, State = states, .after = "Ranking")
 ```
 
-#### Condensed Code 1
+#### Condensed Code 1:
 Now that my initial approach has been worked through and explained, below is the summary and output of the previous code.
 ```{r}
 dfraw <- read.csv("E:/Documents/R/Data/projects/data/USWind.csv",
@@ -156,7 +157,7 @@ glimpse(dfe)
 ```
 
 
-#### Condensed Code 2]
+#### Condensed Code 2:
 Below summarizes the above into a block of code without the format() function.
 
 ```{r}
