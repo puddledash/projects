@@ -27,7 +27,7 @@ library(tidyverse)
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
-Next, we can begin loading the data and taking a brief look at it as a whole.
+Next, we can begin loading the data and taking a brief look at it as a whole. The data can originally be found on [this article](https://howmuch.net/articles/wind-power-in-the-united-states-2018). However, I was able do download the dataset in excel format from [this website](https://www.makeovermonday.co.uk/data/), which contains various other data on other topics along with their original locations.
 
 ``` r
 dfraw <- read.csv("E:/Documents/R/Data/projects/data/USWind.csv",
@@ -86,7 +86,7 @@ colnames(dfraw)
 
 At this point, I decided to break down the steps even further in regards to how I want to approach this set.
 
-### Things to Do
+### Things to Do:
 
 ##### Clean: rename columns (done in Excel), remove commas / periods in numbers, change variable type
 
